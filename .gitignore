@@ -1,0 +1,16 @@
+# python #
+##########
+/bin
+/build
+/dist
+/fiblat.egg-info
+/lib
+/lib64
+/pyvenv.cfg
+/share
+/share
+__pycache__
+
+# pyre #
+########
+/.pyre
