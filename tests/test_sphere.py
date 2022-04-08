@@ -13,7 +13,16 @@ def dist(left: Tuple[float, ...], right: Tuple[float, ...]) -> float:
 
 
 def test_on_unit_cube() -> None:
-    lattice = sphere_lattice(5, 1000)
+    lattice = sphere_lattice(17, 1000)
+    for point in lattice:
+        diff_norm = 1.0
+        for val in point:
+            diff_norm -= val**2
+        assert abs(diff_norm) < 1e-6
+
+
+def test_on_unit_cube_large() -> None:
+    lattice = sphere_lattice(600, 3)
     for point in lattice:
         diff_norm = 1.0
         for val in point:

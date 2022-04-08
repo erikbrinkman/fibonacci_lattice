@@ -1,5 +1,5 @@
 from itertools import count, islice
-from math import cos, gamma, pi, sin, sqrt
+from math import cos, gamma, pi, sin, sqrt, exp, lgamma, log
 from typing import Callable, Iterator, List, Optional, Sequence, Tuple
 
 from ._cube_lattice import cube_lattice
@@ -42,6 +42,9 @@ def inverse_increasing(
     return mid
 
 
+_HLP = log(pi) / 2
+
+
 def cube_to_sphere(cube: Sequence[Sequence[float]]) -> Iterator[Tuple[float, ...]]:
     """Map points from [0, 1]^dim to the sphere
 
@@ -58,7 +61,7 @@ def cube_to_sphere(cube: Sequence[Sequence[float]]) -> Iterator[Tuple[float, ...
     (dim,) = dims
 
     output = [[1.0 for _ in range(dim)] for _ in cube]
-    mults = [gamma(d / 2 + 0.5) / gamma(d / 2) / sqrt(pi) for d in range(2, dim)]
+    mults = [exp(lgamma(d / 2 + 0.5) - lgamma(d / 2) - _HLP) for d in range(2, dim)]
     for base in cube:
         points = [1.0 for _ in range(dim)]
         points[0] *= sin(2 * pi * base[0])
