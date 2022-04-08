@@ -5,7 +5,7 @@ from typing import Iterator
 
 def primes() -> Iterator[int]:
     """Returns an infinite generator of prime numbers
-    
+
     O(n^{3/2}) for taking n elements
     """
     yield from (2, 3, 5, 7)

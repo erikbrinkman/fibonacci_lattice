@@ -10,7 +10,5 @@
 /share
 /share
 __pycache__
-
-# pyre #
-########
 /.pyre
+/.coverage

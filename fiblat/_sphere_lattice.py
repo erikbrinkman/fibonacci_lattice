@@ -28,7 +28,7 @@ def inverse_increasing(
 
     inverse is accurate to an absolute tolerance of atol, and
     must be monotonically increasing over the interval lower
-    to upper    
+    to upper
     """
     mid = (lower + upper) / 2
     approx = func(mid)
@@ -44,7 +44,7 @@ def inverse_increasing(
 
 def cube_to_sphere(cube: Sequence[Sequence[float]]) -> Iterator[Tuple[float, ...]]:
     """Map points from [0, 1]^dim to the sphere
-    
+
     Maps points in [0, 1]^dim to the surface of the sphere; dim + 1 dimensional
     points with unit l2 norms. This mapping preserves relative distance between
     points.
@@ -72,9 +72,9 @@ def cube_to_sphere(cube: Sequence[Sequence[float]]) -> Iterator[Tuple[float, ...
         yield tuple(points)
 
 
-def sphere_lattice(dim: int, num_points: int,) -> List[Tuple[float, ...]]:
+def sphere_lattice(dim: int, num_points: int) -> List[Tuple[float, ...]]:
     """Generate num_points points over the dim - 1 dimensional hypersphere
-    
+
     Generate a `num_points` length list of `dim`-dimensional tuples such the
     each element has an l2 norm of 1, and their nearest neighbor is roughly
     identical for each point.
@@ -85,6 +85,8 @@ def sphere_lattice(dim: int, num_points: int,) -> List[Tuple[float, ...]]:
         returned list
     num_points : the number of points to generate
     """
-    assert dim > 1
-    assert num_points > 0
+    if dim < 2:
+        raise ValueError("dimension must be greater than one")
+    if num_points < 1:
+        raise ValueError("must request at least one point")
     return list(cube_to_sphere(cube_lattice(dim - 1, num_points)))
