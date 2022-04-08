@@ -1,12 +1,11 @@
-from itertools import count, islice
-from math import cos, gamma, pi, sin, sqrt, exp, lgamma, log
-from typing import Callable, Iterator, List, Optional, Sequence, Tuple
-from numba import jit
+from math import cos, pi, sin, exp, lgamma, log
+from numba import njit
+import numpy as np
 
 from ._cube_lattice import cube_lattice
 
 
-@jit(nopython=True)
+@njit
 def int_sin_m(x: float, m: int) -> float:  # pragma: no cover
     """Computes the integral of sin^m(t) dt from 0 to x recursively"""
     cosx = cos(x)
@@ -18,7 +17,7 @@ def int_sin_m(x: float, m: int) -> float:  # pragma: no cover
     return res
 
 
-@jit(nopython=True)
+@njit
 def inv_mult_int_sin_m(
     mult: float,
     m: int,
@@ -48,37 +47,30 @@ def inv_mult_int_sin_m(
 _HLP = log(pi) / 2
 
 
-def cube_to_sphere(cube: Sequence[Sequence[float]]) -> Iterator[Tuple[float, ...]]:
-    """Map points from [0, 1]^dim to the sphere
+@njit
+def _sphere_projection(cube: np.ndarray) -> np.ndarray:  # pragma: no cover
+    npoints, odim = cube.shape
+    dim = odim + 1
+    mults = np.empty((dim - 2,), np.float64)
+    for d in range(2, dim):
+        mults[d - 2] = exp(lgamma((d + 1) / 2) - lgamma(d / 2) - _HLP)
 
-    Maps points in [0, 1]^dim to the surface of the sphere; dim + 1 dimensional
-    points with unit l2 norms. This mapping preserves relative distance between
-    points.
+    output = np.ones((npoints, dim), np.float64)
+    for i in range(npoints):
+        points = output[i]
+        base = cube[i]
 
-    Parameters
-    ----------
-    cube : a sequence points in the [0, 1]^dim hyper cube
-    """
-    dims = {len(p) + 1 for p in cube}
-    assert len(dims) == 1, "not all points had the same dimension"
-    (dim,) = dims
-
-    output = [[1.0 for _ in range(dim)] for _ in cube]
-    mults = [exp(lgamma(d / 2 + 0.5) - lgamma(d / 2) - _HLP) for d in range(2, dim)]
-    for base in cube:
-        points = [1.0 for _ in range(dim)]
         points[0] *= sin(2 * pi * base[0])
         points[1] *= cos(2 * pi * base[0])
-
-        for d, (mult, lat) in enumerate(zip(mults, base[1:]), 2):
-            deg = inv_mult_int_sin_m(mult, d - 1, lat)
+        for d in range(2, dim):
+            deg = inv_mult_int_sin_m(mults[d - 2], d - 1, base[d - 1])
             for j in range(d):
                 points[j] *= sin(deg)
             points[d] *= cos(deg)
-        yield tuple(points)
+    return output
 
 
-def sphere_lattice(dim: int, num_points: int) -> List[Tuple[float, ...]]:
+def sphere_lattice(dim: int, num_points: int) -> np.ndarray:
     """Generate num_points points over the dim - 1 dimensional hypersphere
 
     Generate a `num_points` length list of `dim`-dimensional tuples such the
@@ -95,4 +87,4 @@ def sphere_lattice(dim: int, num_points: int) -> List[Tuple[float, ...]]:
         raise ValueError("dimension must be greater than one")
     if num_points < 1:
         raise ValueError("must request at least one point")
-    return list(cube_to_sphere(cube_lattice(dim - 1, num_points)))
+    return _sphere_projection(cube_lattice(dim - 1, num_points))

@@ -1,39 +1,24 @@
-from statistics import stdev, mean, median
-from math import sqrt
-from itertools import chain
-from typing import Tuple
+import numpy as np
 
 import pytest
 from fiblat import cube_lattice
 
 
-def dist(left: Tuple[float, ...], right: Tuple[float, ...]) -> float:
-    val = 0.0
-    for lv, rv in zip(left, right):
-        val += (lv - rv) ** 2
-    return sqrt(val)
-
-
 def test_one_dim() -> None:
     one = cube_lattice(1, 4)
-    for ind, (actual,) in enumerate(one):
-        assert ind / 4 == actual
+    assert np.allclose(one, np.arange(4)[:, None] / 4)
 
 
 def test_in_unit_cube() -> None:
     lattice = cube_lattice(27, 1000)
-    for point in lattice:
-        for val in point:
-            assert 0 <= val <= 1
+    assert np.all((0 <= lattice) & (lattice <= 1))
 
 
 def test_evenly_distributed() -> None:
     lattice = cube_lattice(27, 100)
-    min_dists = [
-        min(dist(point, other) for other in chain(lattice[:i], lattice[i + 1 :]))
-        for i, point in enumerate(lattice)
-    ]
-    errors = sum(d > 1.8 for d in min_dists)
+    dists = np.linalg.norm(lattice[:, None] - lattice, 2, -1) + 27 * np.eye(100)
+    min_dists = dists.min(-1)
+    errors = np.sum(min_dists > 1.8)
     assert errors < 2
 
 
