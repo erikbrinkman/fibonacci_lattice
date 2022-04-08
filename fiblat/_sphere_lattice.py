@@ -1,44 +1,47 @@
 from itertools import count, islice
 from math import cos, gamma, pi, sin, sqrt, exp, lgamma, log
 from typing import Callable, Iterator, List, Optional, Sequence, Tuple
+from numba import jit
 
 from ._cube_lattice import cube_lattice
 
 
-def int_sin_m(x: float, m: int) -> float:
+@jit(nopython=True)
+def int_sin_m(x: float, m: int) -> float:  # pragma: no cover
     """Computes the integral of sin^m(t) dt from 0 to x recursively"""
-    # NOTE for large values of m, numeric integration may be faster than this
-    # recursive method
-    if m == 0:
-        return x
-    elif m == 1:
-        return 1 - cos(x)
-    else:
-        return (m - 1) / m * int_sin_m(x, m - 2) - cos(x) * sin(x) ** (m - 1) / m
+    cosx = cos(x)
+    sinx = sin(x)
+    start = m % 2
+    res = x if start == 0 else 1 - cosx
+    for p in range(start + 1, m, 2):
+        res = p / (p + 1) * res - cosx * sinx**p / (p + 1)
+    return res
 
 
-def inverse_increasing(
-    func: Callable[[float], float],
+@jit(nopython=True)
+def inv_mult_int_sin_m(
+    mult: float,
+    m: int,
     target: float,
-    lower: float,
-    upper: float,
+    lower: float = 0,
+    upper: float = pi,
     atol: float = 1e-10,
-) -> float:
-    """Returns func inverse of target between lower and upper
+) -> float:  # pragma: no cover
+    """Returns func inverse of mult * integral of sin(x) ** m
 
     inverse is accurate to an absolute tolerance of atol, and
     must be monotonically increasing over the interval lower
     to upper
     """
     mid = (lower + upper) / 2
-    approx = func(mid)
+    approx = mult * int_sin_m(mid, m)
     while abs(approx - target) > atol:
         if approx > target:
             upper = mid
         else:
             lower = mid
         mid = (upper + lower) / 2
-        approx = func(mid)
+        approx = mult * int_sin_m(mid, m)
     return mid
 
 
@@ -68,7 +71,7 @@ def cube_to_sphere(cube: Sequence[Sequence[float]]) -> Iterator[Tuple[float, ...
         points[1] *= cos(2 * pi * base[0])
 
         for d, (mult, lat) in enumerate(zip(mults, base[1:]), 2):
-            deg = inverse_increasing(lambda y: mult * int_sin_m(y, d - 1), lat, 0, pi)
+            deg = inv_mult_int_sin_m(mult, d - 1, lat)
             for j in range(d):
                 points[j] *= sin(deg)
             points[d] *= cos(deg)
