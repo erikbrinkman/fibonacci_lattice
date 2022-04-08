@@ -18,8 +18,8 @@ def test_evenly_distributed() -> None:
     lattice = cube_lattice(27, 100)
     dists = np.linalg.norm(lattice[:, None] - lattice, 2, -1) + 27 * np.eye(100)
     min_dists = dists.min(-1)
-    errors = np.sum(min_dists > 1.8)
-    assert errors < 2
+    errors = np.sum(min_dists < 1.2)
+    assert errors < 3
 
 
 def test_invalid_inputs() -> None:

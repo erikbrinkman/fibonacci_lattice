@@ -20,7 +20,8 @@ def test_evenly_distributed() -> None:
     lattice = sphere_lattice(27, 100)
     dists = 1 - (lattice @ lattice.T) + 2 * np.eye(100)
     min_dists = dists.min(-1)
-    assert np.all(min_dists < 0.7)
+    errors = np.sum(min_dists < 0.3)
+    assert errors < 9
 
 
 def test_invalid_inputs() -> None:
