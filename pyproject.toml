@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fiblat"
-version = "0.3.1"
+version = "0.3.2"
 description = "A package for generating evenly distributed points on a sphere"
 repository = "https://github.com/erikbrinkman/fibonacci_lattice"
 authors = ["Erik Brinkman <erik.brinkman@gmail.com>"]
