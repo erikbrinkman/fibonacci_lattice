@@ -11,14 +11,14 @@ readme = "README.md"
 addopts = "--cov fiblat --cov-report term-missing"
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
-numba = "^0.55.2"
-numpy = ">=1.18,<1.23"
+python = "^3.8"
+numba = "^0.56.3"
+numpy = "^1.23.4"
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.1.2"
-pytest-cov = "^3.0.0"
-pyre-check = "^0.9.14"
+pytest = "^7.2.0"
+pytest-cov = "^4.0.0"
+pyre-check = "^0.9.16"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
