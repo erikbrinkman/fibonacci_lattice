@@ -28,4 +28,4 @@ Development
 -----------
 
 - setup: `poetry install`
-- tests: `poetry run pytest && poetry run pyre`
+- tests: `poetry run pytest`
