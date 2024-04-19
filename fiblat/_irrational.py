@@ -1,40 +1,28 @@
 from itertools import count
-from math import sqrt
 from typing import Iterator
+import numba as nb
+import numpy as np
 
 
-def primes() -> Iterator[int]:
-    """Returns an infinite generator of prime numbers
-
-    O(n^{3/2}) for taking n elements
-    """
-    yield from (2, 3, 5, 7)
-    composites = {}
-    ps = primes()
-    next(ps)
-    p = next(ps)
-    assert p == 3
-    psq = p * p
-    for i in count(9, 2):
-        if i in composites:  # composite
-            step = composites.pop(i)
-        elif i < psq:  # prime
-            yield i
-            continue
-        else:  # composite, = p*p
-            assert i == psq
-            step = 2 * p
-            p = next(ps)
-            psq = p * p
-        i += step
-        while i in composites:
-            i += step
-        composites[i] = step
-
-
-def root_primes() -> Iterator[float]:
-    """Returns an infinite iterator or mutually irrational numbers
-
-    The numbers are defined as the square roots of successive prime numbers.
-    """
-    return (sqrt(p) for p in primes())
+@nb.njit(nb.int64[:](nb.int64))
+def n_primes(n: int) -> np.ndarray:  # pragma: nocover
+    """create an array of the first n primes"""
+    res = np.empty(n, "i8")
+    if n <= 0:
+        return res
+    res[0] = 2
+    if n == 1:
+        return res
+    # this is an upper bound on the highest number the nth prime could be
+    max_num = max(int(n * np.exp(np.sqrt(2 * np.log(n) - 2)) + 1), 10)
+    seive = np.ones((max_num - 4) // 2, "?")
+    j = 1
+    for i in range(3, max_num + 1, 2):
+        if seive[(i - 3) // 2]:
+            res[j] = i
+            j += 1
+            if j == n:
+                return res
+            else:
+                seive[(i**2 - 3) // 2 :: i] = False
+    raise ValueError("inaccurate bound")

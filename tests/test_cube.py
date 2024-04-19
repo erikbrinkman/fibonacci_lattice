@@ -1,6 +1,7 @@
 import numpy as np
 
 import pytest
+from pytest_benchmark.fixture import BenchmarkFixture
 from fiblat import cube_lattice
 
 
@@ -9,8 +10,8 @@ def test_one_dim() -> None:
     assert np.allclose(one, np.arange(4)[:, None] / 4)
 
 
-def test_in_unit_cube() -> None:
-    lattice = cube_lattice(27, 1000)
+def test_in_unit_cube(benchmark: BenchmarkFixture) -> None:
+    lattice = benchmark(cube_lattice, 100, 1000)
     assert np.all((0 <= lattice) & (lattice <= 1))
 
 

@@ -1,30 +1,33 @@
 from math import cos, pi, sin, exp, lgamma, log
-from numba import njit
+import math
+import numba as nb
 import numpy as np
 
 from ._cube_lattice import cube_lattice
 
 
-@njit
+@nb.njit(nb.float64(nb.float64, nb.int64), fastmath=True, error_model="numpy")
 def int_sin_m(x: float, m: int) -> float:  # pragma: no cover
     """Computes the integral of sin^m(t) dt from 0 to x recursively"""
-    cosx = cos(x)
-    sinx = sin(x)
+    cosx = np.cos(x)
+    sinx = np.sin(x)
+    sinx2 = sinx**2
     start = m % 2
     res = x if start == 0 else 1 - cosx
+    sinxp = sinx if start == 0 else sinx2
     for p in range(start + 1, m, 2):
-        res = p / (p + 1) * res - cosx * sinx**p / (p + 1)
+        res = p / (p + 1) * res - cosx * sinxp / (p + 1)
+        sinxp *= sinx2
     return res
 
 
-@njit
-def inv_mult_int_sin_m(
-    mult: float,
-    m: int,
+@nb.njit(nb.float64(nb.float64, nb.int64, nb.float64, nb.float64, nb.float64))
+def inv_int_sin_m(
     target: float,
-    lower: float = 0,
-    upper: float = pi,
-    atol: float = 1e-10,
+    m: int,
+    lower: float,
+    upper: float,
+    atol: float,
 ) -> float:  # pragma: no cover
     """Returns func inverse of mult * integral of sin(x) ** m
 
@@ -33,44 +36,55 @@ def inv_mult_int_sin_m(
     to upper
     """
     mid = (lower + upper) / 2
-    approx = mult * int_sin_m(mid, m)
+    approx = int_sin_m(mid, m)
     while abs(approx - target) > atol:
         if approx > target:
             upper = mid
         else:
             lower = mid
         mid = (upper + lower) / 2
-        approx = mult * int_sin_m(mid, m)
+        approx = int_sin_m(mid, m)
     return mid
+
+
+@nb.njit(
+    nb.void(nb.float64[:], nb.float64[:], nb.int64, nb.float64, nb.float64, nb.float64)
+)
+def inv_int_sin_ms(
+    results: np.ndarray,
+    targets: np.ndarray,
+    m: int,
+    lower: float,
+    upper: float,
+    atol: float,
+) -> None:  # pragma: no cover
+    """Returns func inverse of mult * integral of sin(x) ** m
+
+    inverse is accurate to an absolute tolerance of atol, and
+    must be monotonically increasing over the interval lower
+    to upper
+    """
+    if targets.size == 0:
+        pass
+    elif targets.size == 1:
+        results[0] = inv_int_sin_m(targets[0], m, lower, upper, atol)
+    else:
+        mid = (lower + upper) / 2
+        approx = int_sin_m(mid, m)
+        ind = np.searchsorted(targets, approx)
+        inv_int_sin_ms(results[:ind], targets[:ind], m, lower, mid, atol)
+        inv_int_sin_ms(results[ind:], targets[ind:], m, mid, upper, atol)
 
 
 _HLP = log(pi) / 2
 
 
-@njit
-def _sphere_projection(cube: np.ndarray) -> np.ndarray:  # pragma: no cover
-    npoints, odim = cube.shape
-    dim = odim + 1
-    mults = np.empty((dim - 2,), np.float64)
-    for d in range(2, dim):
-        mults[d - 2] = exp(lgamma((d + 1) / 2) - lgamma(d / 2) - _HLP)
-
-    output = np.ones((npoints, dim), np.float64)
-    for i in range(npoints):
-        points = output[i]
-        base = cube[i]
-
-        points[0] *= sin(2 * pi * base[0])
-        points[1] *= cos(2 * pi * base[0])
-        for d in range(2, dim):
-            deg = inv_mult_int_sin_m(mults[d - 2], d - 1, base[d - 1])
-            for j in range(d):
-                points[j] *= sin(deg)
-            points[d] *= cos(deg)
-    return output
-
-
-def sphere_lattice(dim: int, num_points: int) -> np.ndarray:
+@nb.njit(
+    nb.float64[:, :](nb.int64, nb.int64),
+    fastmath=True,
+    error_model="numpy",
+)
+def sphere_lattice(dim: int, num_points: int) -> np.ndarray:  # pragma: no cover
     """Generate num_points points over the dim - 1 dimensional hypersphere
 
     Generate a `num_points` length list of `dim`-dimensional tuples such the
@@ -84,7 +98,20 @@ def sphere_lattice(dim: int, num_points: int) -> np.ndarray:
     num_points : the number of points to generate
     """
     if dim < 2:
-        raise ValueError("dimension must be greater than one")
-    if num_points < 1:
-        raise ValueError("must request at least one point")
-    return _sphere_projection(cube_lattice(dim - 1, num_points))
+        raise ValueError(f"dimension must be greater than one: {dim}")
+    elif num_points < 1:
+        raise ValueError(f"must request at least one point: {num_points}")
+    cube = cube_lattice(dim - 1, num_points)
+
+    output = np.ones((num_points, dim), "f8")
+    output[:, 0] *= np.sin(2 * np.pi * cube[:, 0])
+    output[:, 1] *= np.cos(2 * np.pi * cube[:, 0])
+    pdegs = np.empty(num_points)
+
+    for d, targets in enumerate(cube.T[1:], 2):
+        mult = np.exp(math.lgamma((d + 1) / 2) - math.lgamma(d / 2) - _HLP)
+        order = targets.argsort()
+        inv_int_sin_ms(pdegs, targets[order] / mult, d - 1, 0, np.pi, 1e-10)
+        output[order, :d] *= np.sin(pdegs)[:, None]
+        output[order, d] *= np.cos(pdegs)
+    return output
