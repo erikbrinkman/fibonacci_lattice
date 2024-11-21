@@ -12,8 +12,8 @@ addopts = "--cov fiblat --cov-report term-missing -m 'not long'"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-numba = "^0.59.1"
 numpy = "^1.26.4"
+numba = "^0.60.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.1"
