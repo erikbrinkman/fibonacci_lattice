@@ -1,12 +1,11 @@
-from itertools import count
-from typing import Iterator
 import numba as nb
 import numpy as np
+from numpy.typing import NDArray
 
 
-@nb.njit(nb.int64[:](nb.int64))
-def n_primes(n: int) -> np.ndarray:  # pragma: nocover
-    """create an array of the first n primes"""
+@nb.jit(nb.int64[:](nb.int64), cache=True, nogil=True)
+def n_primes(n: int) -> NDArray[np.float64]:  # pragma: nocover
+    """Create an array of the first n primes."""
     res = np.empty(n, "i8")
     if n <= 0:
         return res

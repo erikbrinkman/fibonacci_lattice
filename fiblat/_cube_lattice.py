@@ -1,14 +1,19 @@
-from itertools import chain, islice, count
-from typing import Iterator, List, Optional, Tuple
-import numpy as np
 import numba as nb
+import numpy as np
+from numpy.typing import NDArray
 
 from ._irrational import n_primes
 
 
-@nb.njit(nb.float64[:, :](nb.int64, nb.int64), fastmath=True, error_model="numpy")
-def cube_lattice(dim: int, num_points: int) -> np.ndarray:  # pragma: nocover
-    """Generate num_points points over the dim dimensional cube
+@nb.jit(
+    nb.float64[:, :](nb.int64, nb.int64),
+    cache=True,
+    nogil=True,
+    fastmath=True,
+    error_model="numpy",
+)
+def cube_lattice(dim: int, num_points: int) -> NDArray[np.float64]:  # pragma: nocover
+    """Generate num_points points over the dim dimensional cube.
 
     Generates `num_points` roughly evenly from the `[0, 1]^dim`.
 

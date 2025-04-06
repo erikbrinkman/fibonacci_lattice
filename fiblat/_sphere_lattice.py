@@ -1,14 +1,22 @@
-from math import cos, pi, sin, exp, lgamma, log
 import math
+from math import log, pi
+
 import numba as nb
 import numpy as np
+from numpy.typing import NDArray
 
 from ._cube_lattice import cube_lattice
 
 
-@nb.njit(nb.float64(nb.float64, nb.int64), fastmath=True, error_model="numpy")
+@nb.jit(
+    nb.float64(nb.float64, nb.int64),
+    fastmath=True,
+    error_model="numpy",
+    cache=True,
+    nogil=True,
+)
 def int_sin_m(x: float, m: int) -> float:  # pragma: no cover
-    """Computes the integral of sin^m(t) dt from 0 to x recursively"""
+    """Compute the integral of sin^m(t) dt from 0 to x recursively."""
     cosx = np.cos(x)
     sinx = np.sin(x)
     sinx2 = sinx**2
@@ -21,7 +29,11 @@ def int_sin_m(x: float, m: int) -> float:  # pragma: no cover
     return res
 
 
-@nb.njit(nb.float64(nb.float64, nb.int64, nb.float64, nb.float64, nb.float64))
+@nb.jit(
+    nb.float64(nb.float64, nb.int64, nb.float64, nb.float64, nb.float64),
+    cache=True,
+    nogil=True,
+)
 def inv_int_sin_m(
     target: float,
     m: int,
@@ -29,11 +41,10 @@ def inv_int_sin_m(
     upper: float,
     atol: float,
 ) -> float:  # pragma: no cover
-    """Returns func inverse of mult * integral of sin(x) ** m
+    """Invert mult * integral of sin(x) ** m.
 
-    inverse is accurate to an absolute tolerance of atol, and
-    must be monotonically increasing over the interval lower
-    to upper
+    The inverse is accurate to an absolute tolerance of atol, and must be
+    monotonically increasing over the interval lower to upper.
     """
     mid = (lower + upper) / 2
     approx = int_sin_m(mid, m)
@@ -47,22 +58,23 @@ def inv_int_sin_m(
     return mid
 
 
-@nb.njit(
-    nb.void(nb.float64[:], nb.float64[:], nb.int64, nb.float64, nb.float64, nb.float64)
+@nb.jit(
+    nb.void(nb.float64[:], nb.float64[:], nb.int64, nb.float64, nb.float64, nb.float64),
+    cache=True,
+    nogil=True,
 )
-def inv_int_sin_ms(
-    results: np.ndarray,
-    targets: np.ndarray,
+def inv_int_sin_ms(  # noqa: PLR0913
+    results: NDArray[np.float64],
+    targets: NDArray[np.float64],
     m: int,
     lower: float,
     upper: float,
     atol: float,
 ) -> None:  # pragma: no cover
-    """Returns func inverse of mult * integral of sin(x) ** m
+    """Invert mult * integral of sin(x) ** m.
 
-    inverse is accurate to an absolute tolerance of atol, and
-    must be monotonically increasing over the interval lower
-    to upper
+    The inverse is accurate to an absolute tolerance of atol, and must be
+    monotonically increasing over the interval lower to upper.
     """
     if targets.size == 0:
         pass
@@ -79,13 +91,17 @@ def inv_int_sin_ms(
 _HLP = log(pi) / 2
 
 
-@nb.njit(
+@nb.jit(
     nb.float64[:, :](nb.int64, nb.int64),
+    cache=True,
+    nogil=True,
     fastmath=True,
     error_model="numpy",
 )
-def sphere_lattice(dim: int, num_points: int) -> np.ndarray:  # pragma: no cover
-    """Generate num_points points over the dim - 1 dimensional hypersphere
+def sphere_lattice(
+    dim: int, num_points: int
+) -> NDArray[np.float64]:  # pragma: no cover
+    """Generate num_points points over the dim - 1 dimensional hypersphere.
 
     Generate a `num_points` length list of `dim`-dimensional tuples such the
     each element has an l2 norm of 1, and their nearest neighbor is roughly
@@ -97,7 +113,7 @@ def sphere_lattice(dim: int, num_points: int) -> np.ndarray:  # pragma: no cover
         returned list
     num_points : the number of points to generate
     """
-    if dim < 2:
+    if dim < 2:  # noqa: PLR2004
         raise ValueError(f"dimension must be greater than one: {dim}")
     elif num_points < 1:
         raise ValueError(f"must request at least one point: {num_points}")
